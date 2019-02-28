@@ -28,7 +28,7 @@ def build():
             system.mesh, system.velocityField
             )
         figViscComponent = fig.Contours(
-            system.mesh, fn.math.log10(system.viscosityFn),
+            system.mesh, fn.math.log10(system.viscosityProj),
             colours = "red black", interval = 0.5, colourBar = False 
             )
 

@@ -7,7 +7,7 @@ import numpy as np
 import math
 
 from planetengine.utilities import Grouper
-import planetengine.analysis as analysis
+from planetengine import analysis
 
 def build():
 
@@ -32,17 +32,9 @@ def build():
             )
         figViscComponent = fig.Contours(
             system.mesh,
-            fn.math.log10(system.viscosityProj),
+            fn.math.log10(system.viscosityFn),
             colours = "red black",
             interval = 0.5,
-            colourBar = False,
-            )
-        figMaterialComponent = fig.Points(
-            system.swarm,
-            fn_colour = system.materialVar,
-            fn_mask = system.materialVar,
-            fn_size = 4.,
-            colours = "purple",
             colourBar = False,
             )
 
@@ -53,8 +45,8 @@ def build():
 
     def make_data(system, step, modeltime):
         zerodDataDict = {
-            'Nu': analysis.Analyse.DimensionlessGradient(system.temperatureField, system.mesh,
-                surfIndexSet = system.outer, baseIndexSet = system.inner
+            'Nu': analysis.Analyse.CurvedDimensionlessGradient(system.temperatureField,
+                system.outer, system.inner
                 ),
             'avTemp': analysis.Analyse.ScalarFieldAverage(system.temperatureField, system.mesh),
             'VRMS': analysis.Analyse.VectorFieldVolRMS(system.velocityField, system.mesh),

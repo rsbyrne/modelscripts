@@ -5,29 +5,29 @@ import math
 from planetengine.utilities import Grouper
 
 def build(
-    res = 64,
-    ratio = 0.54,
-    aspect = 1.,
-    length = 1.,
-    Ra = 1e7,
-    heating = 0.,
-    surfT = 0.,
-    deltaT = 1.,
-    diffusivity = 1.,
-    buoyancy = 1.,
-    creep = 1.,
-    creep_sR = 3e4,
-    tau = 4e5,
-    tau_bR = 26.,
-    cont_buoyancy_mR = 1.,
-    cont_creep_mR = 1.,
-    cont_creep_sR_mR = 1.,
-    cont_maxVisc_mR = 1.,
-    cont_tau_mR = 1.,
-    cont_tau_bR_mR = 1.,
-    cont_heating_mR = 1.,
-    cont_diffusivity_mR = 1.,
-    ):
+        res = 64,
+        ratio = 0.54,
+        aspect = 1.,
+        length = 1.,
+        Ra = 1e7,
+        heating = 0.,
+        surfT = 0.,
+        deltaT = 1.,
+        diffusivity = 1.,
+        buoyancy = 1.,
+        creep = 1.,
+        creep_sR = 3e4,
+        tau = 4e5,
+        tau_bR = 26.,
+        cont_buoyancy_mR = 1.,
+        cont_creep_mR = 1.,
+        cont_creep_sR_mR = 1.,
+        cont_maxVisc_mR = 1.,
+        cont_tau_mR = 1.,
+        cont_tau_bR_mR = 1.,
+        cont_heating_mR = 1.,
+        cont_diffusivity_mR = 1.,
+        ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
 
@@ -116,7 +116,7 @@ def build(
         mapping = {
             0: tau * (1. + (tau_bR - 1) * depthFn),
             1: tau * cont_tau_mR * (1. + (tau_bR * cont_tau_bR_mR - 1) * depthFn)
-            }        
+            }
         )
 
     secInvFn = fn.tensor.second_invariant(fn.tensor.symmetric(vc.fn_gradient))
@@ -138,10 +138,6 @@ def build(
         )
 
     viscosityFn = fn.misc.min(creepViscFn, plasticViscFn)
-
-    # this is just for ease of visualisation:
-    viscosityProj = uw.mesh.MeshVariable(mesh, 1)
-    viscosityProjector = uw.utils.MeshVariable_Projection(viscosityProj, viscosityFn)
 
     diffusivityFn = fn.branching.map(
         fn_key = materialVar,
@@ -187,6 +183,9 @@ def build(
         order = 2,
         )
 
+    step = fn.misc.constant(0)
+    modeltime = fn.misc.constant(0.)
+
     ### SOLVING ###
 
     def postSolve():
@@ -214,7 +213,6 @@ def build(
             stokes._velocitySol._cself,
             False
             )
-        viscosityProjector.solve()
 
     def integrate():
         dt = min(advDiff.get_max_dt(), advector.get_max_dt())
@@ -225,7 +223,10 @@ def build(
 
     def iterate():
         solve()
-        return integrate()
+        dt = integrate()
+        modeltime.value += dt
+        step.value += 1
 
     ### HOUSEKEEPING: IMPORTANT! ###
+
     return Grouper(locals())

@@ -8,10 +8,10 @@ from planetengine import initials as InitialConditions
 from planetengine.utilities import CoordSystems
 
 def build(
-    cont_centre = 0.5,
-    cont_width = 0.5,
-    cont_thickness = 0.035,
-    ):
+        cont_centre = 0.5,
+        cont_width = 0.5,
+        cont_thickness = 0.035,
+        ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
 
@@ -20,7 +20,7 @@ def build(
 
     ### INITIALS ###
 
-    def apply(system):
+    def attach(system):
 
         if type(system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
             phase = 1.
@@ -62,13 +62,26 @@ def build(
                     ]
                 ),
             InitialConditions.SetVal(
-                [system.velocityField.data, system.pressureField.data, system.temperatureDotField.data],
+                [system.velocityField.data,
+                 system.pressureField.data,
+                 system.temperatureDotField.data,
+                 system.step.value,
+                 system.modeltime.value],
                 0.
                 ),
             ])
 
-        initialConditions.apply()
-        system.solve()
+        def apply():
+            initialConditions.apply()
+            system.solve()
+
+        ### HOUSEKEEPING: IMPORTANT! ###
+
+        group = Grouper(locals())
+        group.SetVal('script', script)
+        group.SetVal('inputs', inputs)
+        return group
 
     ### HOUSEKEEPING: IMPORTANT! ###
+
     return Grouper(locals())

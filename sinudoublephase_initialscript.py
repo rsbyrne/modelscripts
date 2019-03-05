@@ -8,6 +8,9 @@ from planetengine import initials as InitialConditions
 from planetengine.utilities import CoordSystems
 
 def build(
+        pert = 0.2,
+        freq = 1.,
+        phase = 0.,
         cont_centre = 0.5,
         cont_width = 0.5,
         cont_thickness = 0.035,
@@ -38,7 +41,9 @@ def build(
                 system.temperatureField.data,
                 curvedBox(system.mesh.data),
                 phase = phase,
-                tempRange = (system.surfT, system.baseT)
+                freq = freq,
+                pert = pert,
+                tempRange = (system.surfT, system.baseT),
                 ),
             InitialConditions.Indices(
                 system.temperatureField.data,

@@ -16,17 +16,6 @@ def build(
         diffusivity = 1.,
         buoyancy = 1.,
         creep = 1.,
-        creep_sR = 3e4,
-        tau = 4e5,
-        tau_bR = 26.,
-        cont_buoyancy_mR = 1.,
-        cont_creep_mR = 1.,
-        cont_creep_sR_mR = 1.,
-        cont_maxVisc_mR = 1.,
-        cont_tau_mR = 1.,
-        cont_tau_bR_mR = 1.,
-        cont_heating_mR = 1.,
-        cont_diffusivity_mR = 1.,
         periodic = False,
         ):
 
@@ -70,20 +59,6 @@ def build(
     pressureField = uw.mesh.MeshVariable(mesh.subMesh, 1)
     velocityField = uw.mesh.MeshVariable(mesh, 2)
 
-    swarm = uw.swarm.Swarm(mesh = mesh, particleEscape = True)
-    swarm.populate_using_layout(uw.swarm.layouts.PerCellSpaceFillerLayout(swarm, 12))
-
-    materialVar = swarm.add_variable(dataType = "int", count = 1)
-
-    repopulator = uw.swarm.PopulationControl(
-        swarm,
-        aggressive = True,
-        splitThreshold = 0.15,
-        maxDeletions = 2,
-        maxSplits = 10,
-        particlesPerCell = 10
-        )
-
     ### BOUNDARIES ###
     
     inner = mesh.specialSets["inner"]
@@ -114,29 +89,11 @@ def build(
     magnitude = fn.math.sqrt(fn.coord()[0]**2 + fn.coord()[1]**2)
     depthFn = (mesh.radialLengths[1] - magnitude) / length
 
-    buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: buoyancy,
-            1: buoyancy * cont_buoyancy_mR,
-            }        
-        )
+    buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * buoyancy
 
-    diffusivityFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: diffusivity,
-            1: diffusivity * cont_diffusivity_mR,
-            }
-        )
+    diffusivityFn = diffusivity
 
-    heatingFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: heating,
-            1: heating * cont_heating_mR,
-            }
-        )
+    heatingFn = heating
 
     ### RHEOLOGY ###
 
@@ -144,61 +101,7 @@ def build(
     vc_eqNum = uw.systems.sle.EqNumber(vc, False )
     vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
 
-    yieldStressFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: tau * (1. + (tau_bR - 1) * depthFn),
-            1: tau * cont_tau_mR * (1. + (tau_bR * cont_tau_bR_mR - 1) * depthFn)
-            }
-        )
-
-    secInvFn = fn.tensor.second_invariant(
-        fn.tensor.symmetric(
-            vc.fn_gradient
-            )
-        )
-
-    plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
-
-    creepViscFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: creep * fn.math.pow(
-                fn.misc.constant(creep_sR),
-                -1. * (temperatureField - baseT)
-                ),
-            1: creep * cont_creep_mR * fn.math.pow(
-                fn.misc.constant(creep_sR * cont_creep_sR_mR),
-                -1. * (temperatureField - baseT)
-                ),
-            }
-        )
-
-    viscosityFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: fn.misc.max(
-                creep,
-                fn.misc.min(
-                    creep * creep_sR,
-                    fn.misc.min(
-                        creepViscFn,
-                        plasticViscFn,
-                        )
-                    )
-                ),
-            1: fn.misc.max(
-                creep * cont_creep_mR,
-                fn.misc.min(
-                    creep * creep_sR * cont_creep_mR * cont_creep_sR_mR,
-                    fn.misc.min(
-                        creepViscFn,
-                        plasticViscFn,
-                        )
-                    )
-                ),
-            }
-        )
+    viscosityFn = 1.
 
     ### SYSTEMS ###
 
@@ -220,12 +123,6 @@ def build(
         fn_diffusivity = diffusivityFn,
         fn_sourceTerm = heatingFn,
         conditions = [tempBC,]
-        )
-
-    advector = uw.systems.SwarmAdvector(
-        swarm = swarm,
-        velocityField = velocityField,
-        order = 2,
         )
 
     step = fn.misc.constant(0)
@@ -250,7 +147,6 @@ def build(
     def solve():
         velocityField.data[:] = 0.
         solver.solve(
-            nonLinearIterate = True,
             callback_post_solve = postSolve,
             )
         uw.libUnderworld.Underworld.AXequalsX(
@@ -260,10 +156,8 @@ def build(
             )
 
     def integrate():
-        dt = min(advDiff.get_max_dt(), advector.get_max_dt())
+        dt = advDiff.get_max_dt()
         advDiff.integrate(dt)
-        advector.integrate(dt)
-        repopulator.repopulate()
         return dt
 
     def iterate():
@@ -276,13 +170,6 @@ def build(
 
     varsOfState = [
         ((("temperatureField", temperatureField),), ("mesh", mesh)),
-        ((("materialVar", materialVar),), ("swarm", swarm)),
         ]
-
-#     observationVars = {
-#         'temperatureField': temperatureField,
-#         '
-#         'viscosityFn',
-#         }
 
     return Grouper(locals())

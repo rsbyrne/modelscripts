@@ -8,12 +8,12 @@ from planetengine import initials as InitialConditions
 from planetengine.utilities import CoordSystems
 
 def build(
-        gradient = 1.,
-        exponent = 1.,
-        smoothness = 1,
+        gradient = 3.,
+        exponent = 0.5,
+        smoothness = 10.,
         randomSeed = 1066,
         cont_centre = 0.5,
-        cont_width = 0.5,
+        cont_width = 1./ 3.,
         cont_thickness = 0.035,
         ):
 

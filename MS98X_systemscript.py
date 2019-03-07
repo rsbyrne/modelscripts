@@ -6,12 +6,12 @@ from planetengine.utilities import Grouper
 
 def build(
         res = 64,
-        ratio = 0.54,
+        ratio = 0.5,
         aspect = 1.,
         length = 1.,
         Ra = 1e7,
-        heating = 0.,
-        surfT = 0.,
+        heating = 1.,
+        surfT = 0.12,
         deltaT = 1.,
         diffusivity = 1.,
         buoyancy = 1.,
@@ -19,14 +19,13 @@ def build(
         creep_sR = 3e4,
         tau = 4e5,
         tau_bR = 26.,
-        cont_buoyancy_mR = 1.,
-        cont_creep_mR = 1.,
-        cont_creep_sR_mR = 1.,
-        cont_maxVisc_mR = 1.,
-        cont_tau_mR = 1.,
-        cont_tau_bR_mR = 1.,
-        cont_heating_mR = 1.,
-        cont_diffusivity_mR = 1.,
+        cont_buoyancy_mR = 2.,
+        cont_creep_mR = 2.,
+        cont_creep_sR_mR = 2.,
+        cont_tau_mR = 2.,
+        cont_tau_bR_mR = 2.,
+        cont_heating_mR = 2.,
+        cont_diffusivity_mR = 0.5,
         periodic = False,
         ):
 
@@ -38,11 +37,15 @@ def build(
     ### MESH & MESH VARIABLES ###
 
     outerRad = length / (1. - min(0.99999, max(0.00001, ratio)))
+    inputs['ratio'] = ratio
     radii = (outerRad - length, outerRad)
 
     maxAspect = math.pi * sum(radii) / length
     aspect = min(aspect, maxAspect)
     inputs['aspect'] = aspect
+    if aspect == maxAspect:
+        periodic = True
+        inputs['periodic'] = periodic
 
     width = length**2 * aspect * 2. / (radii[1]**2 - radii[0]**2)
     midpoint = math.pi / 2.
@@ -54,8 +57,9 @@ def build(
         ]
     angLen = angExtentRaw[1] - angExtentRaw[0]
 
-    radRes = res
-    angRes = 4 * int(angLen * (int(radRes * radii[1] / length)) / 4.)
+    radRes = max(16, int(res / 16) * 16)
+    inputs['res'] = radRes
+    angRes = 16 * int(angLen * (int(radRes * radii[1] / length)) / 16)
     elementRes = (radRes, angRes)
 
     mesh = uw.mesh.FeMesh_Annulus(
@@ -111,8 +115,8 @@ def build(
     ### FUNCTIONS ###
 
     baseT = surfT + deltaT
-    magnitude = fn.math.sqrt(fn.coord()[0]**2 + fn.coord()[1]**2)
-    depthFn = (mesh.radialLengths[1] - magnitude) / length
+    depthFn = (mesh.radialLengths[1] - mesh.radiusFn) \
+        / (mesh.radialLengths[1] - mesh.radialLengths[0])
 
     buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * fn.branching.map(
         fn_key = materialVar,

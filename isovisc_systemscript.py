@@ -27,11 +27,15 @@ def build(
     ### MESH & MESH VARIABLES ###
 
     outerRad = length / (1. - min(0.99999, max(0.00001, ratio)))
+    inputs['ratio'] = ratio
     radii = (outerRad - length, outerRad)
 
     maxAspect = math.pi * sum(radii) / length
     aspect = min(aspect, maxAspect)
     inputs['aspect'] = aspect
+    if aspect == maxAspect:
+        periodic = True
+        inputs['periodic'] = periodic
 
     width = length**2 * aspect * 2. / (radii[1]**2 - radii[0]**2)
     midpoint = math.pi / 2.
@@ -43,8 +47,9 @@ def build(
         ]
     angLen = angExtentRaw[1] - angExtentRaw[0]
 
-    radRes = res
-    angRes = 4 * int(angLen * (int(radRes * radii[1] / length)) / 4.)
+    radRes = max(16, int(res / 16) * 16)
+    inputs['res'] = radRes
+    angRes = 16 * int(angLen * (int(radRes * radii[1] / length)) / 16)
     elementRes = (radRes, angRes)
 
     mesh = uw.mesh.FeMesh_Annulus(
@@ -86,8 +91,6 @@ def build(
     ### FUNCTIONS ###
 
     baseT = surfT + deltaT
-    magnitude = fn.math.sqrt(fn.coord()[0]**2 + fn.coord()[1]**2)
-    depthFn = (mesh.radialLengths[1] - magnitude) / length
 
     buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * buoyancy
 

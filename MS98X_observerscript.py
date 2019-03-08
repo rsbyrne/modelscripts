@@ -16,9 +16,9 @@ def build():
     inputs = locals().copy()
     script = __file__
 
-    def attach(system):
+    ### PROJECTORS ###
 
-        ### PROJECTORS ###
+    def make_tools(system):
 
         viscosityProj = uw.mesh.MeshVariable(system.mesh, 1)
         viscosityProjector = uw.utils.MeshVariable_Projection(
@@ -26,9 +26,14 @@ def build():
             system.viscosityFn,
             )
 
-        projectors = [viscosityProjector,]
+        projectors = {'viscosityProjector': viscosityProjector}
+        projections = {'viscosityProj': viscosityProj}
+        tools = {'projectors': projectors, 'projections': projections}
+        return Grouper(tools)
 
-        ### FIGURES ###
+    ### FIGURES ###
+
+    def make_figs(system, tools):
 
         fig = glucifer.Figure(edgecolour = "white", quality = 2)
 
@@ -45,7 +50,7 @@ def build():
 
         figViscComponent = fig.Contours(
             system.mesh,
-            fn.math.log10(viscosityProj),
+            fn.math.log10(tools.projections['viscosityProj']),
             colours = "red black",
             interval = 0.5,
             colourBar = False,
@@ -62,8 +67,11 @@ def build():
 
         figs = {'fig': fig, }
 
-        ### DATA ###
+        return figs
 
+    ### DATA ###
+
+    def make_data(system, tools):
         zerodDataDict = {
             'Nu': analysis.Analyse.DimensionlessGradient(
                 system.temperatureField,
@@ -123,12 +131,7 @@ def build():
             'collectors': [dataCollector,],
             }
 
-        ### HOUSEKEEPING: IMPORTANT! ###
-
-        group = Grouper(locals())
-        group.SetVal('script', script)
-        group.SetVal('inputs', inputs)
-        return group
+        return data
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

@@ -20,7 +20,7 @@ def build(
 
     ### INITIALS ###
 
-    def attach(system):
+    def apply(system):
 
         if type(system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
             phase = 1.
@@ -57,16 +57,8 @@ def build(
                 ),
             ])
 
-        def apply():
-            initialConditions.apply()
-            system.solve()
-
-        ### HOUSEKEEPING: IMPORTANT! ###
-
-        group = Grouper(locals())
-        group.SetVal('script', script)
-        group.SetVal('inputs', inputs)
-        return group
+        initialConditions.apply()
+        system.solve()
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

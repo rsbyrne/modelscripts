@@ -16,13 +16,17 @@ def build():
     inputs = locals().copy()
     script = __file__
 
-    def attach(system):
+    ### PROJECTORS ###
 
-        ### PROJECTORS ###
+    def make_tools(system):
 
-        projectors = []
+        tools = {}
 
-        ### FIGURES ###
+        return Grouper(tools)
+
+    ### FIGURES ###
+
+    def make_figs(system, tools):
 
         fig = glucifer.Figure(edgecolour = "white", quality = 2)
 
@@ -39,7 +43,11 @@ def build():
 
         figs = {'fig': fig, }
 
-        ### DATA ###
+        return figs
+
+    ### DATA ###
+
+    def make_data(system, tools):
 
         zerodDataDict = {
             'Nu': analysis.Analyse.DimensionlessGradient(
@@ -87,12 +95,7 @@ def build():
             'collectors': [dataCollector,],
             }
 
-        ### HOUSEKEEPING: IMPORTANT! ###
-
-        group = Grouper(locals())
-        group.SetVal('script', script)
-        group.SetVal('inputs', inputs)
-        return group
+        return data
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

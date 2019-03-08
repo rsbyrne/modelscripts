@@ -57,9 +57,10 @@ def build(
         ]
     angLen = angExtentRaw[1] - angExtentRaw[0]
 
-    radRes = max(16, int(res / 16) * 16)
+    minRes = 16
+    radRes = max(minRes, int(res / minRes) * minRes)
     inputs['res'] = radRes
-    angRes = 16 * int(angLen * (int(radRes * radii[1] / length)) / 16)
+    angRes = minRes * int(angLen * (int(radRes * radii[1] / length)) / minRes)
     elementRes = (radRes, angRes)
 
     mesh = uw.mesh.FeMesh_Annulus(
@@ -75,8 +76,11 @@ def build(
     velocityField = uw.mesh.MeshVariable(mesh, 2)
 
     swarm = uw.swarm.Swarm(mesh = mesh, particleEscape = True)
-    swarm.populate_using_layout(uw.swarm.layouts.PerCellSpaceFillerLayout(swarm, 12))
-
+    swarm.populate_using_layout(
+        uw.swarm.layouts.PerCellSpaceFillerLayout(
+            swarm, 12
+            )
+        )
     materialVar = swarm.add_variable(dataType = "int", count = 1)
 
     repopulator = uw.swarm.PopulationControl(
@@ -123,7 +127,7 @@ def build(
         mapping = {
             0: buoyancy,
             1: buoyancy * cont_buoyancy_mR,
-            }        
+            }
         )
 
     diffusivityFn = fn.branching.map(
@@ -228,7 +232,7 @@ def build(
 
     advector = uw.systems.SwarmAdvector(
         swarm = swarm,
-        velocityField = velocityField,
+        velocityField = vc,
         order = 2,
         )
 
@@ -282,11 +286,5 @@ def build(
         ((("temperatureField", temperatureField),), ("mesh", mesh)),
         ((("materialVar", materialVar),), ("swarm", swarm)),
         ]
-
-#     observationVars = {
-#         'temperatureField': temperatureField,
-#         '
-#         'viscosityFn',
-#         }
 
     return Grouper(locals())

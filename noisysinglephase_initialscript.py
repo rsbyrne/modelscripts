@@ -12,9 +12,6 @@ def build(
         exponent = 0.5,
         smoothness = 10.,
         randomSeed = 1066,
-        cont_centre = 0.5,
-        cont_width = 1./ 3.,
-        cont_thickness = 0.035,
         ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
@@ -51,22 +48,6 @@ def build(
                 system.temperatureField.data,
                 [(system.outer.data, system.surfT),
                 (system.inner.data, system.baseT)]
-                ),
-            InitialConditions.Extents(
-                system.materialVar.data, 
-                curvedBox(system.swarm.particleCoordinates.data),
-                initialExtents = [
-                    (0, fn.misc.constant(True)),
-                    (1, fn.shape.Polygon(
-                        np.array([
-                            [cont_centre - cont_width / 2., 1. - cont_thickness],
-                            [cont_centre - cont_width / 2., 1.],
-                            [cont_centre + cont_width / 2., 1.],
-                            [cont_centre + cont_width / 2., 1. - cont_thickness]
-                            ])
-                        )),
-                    #(2, fn.shape.Polygon(np.array([[0., 0.], [0., 0.02], [2., 0.02], [2., 0.]]))),
-                    ]
                 ),
             InitialConditions.SetVal(
                 [system.velocityField.data,

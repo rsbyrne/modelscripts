@@ -58,6 +58,8 @@ def build(
             ])
 
         initialConditions.apply()
+        system.step.value = 0
+        system.modeltime.value = 0.
         system.solve()
 
     ### HOUSEKEEPING: IMPORTANT! ###

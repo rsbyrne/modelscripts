@@ -52,14 +52,14 @@ def build(
             InitialConditions.SetVal(
                 [system.velocityField.data,
                  system.pressureField.data,
-                 system.temperatureDotField.data,
-                 system.step.value,
-                 system.modeltime.value],
+                 system.temperatureDotField.data],
                 0.
                 ),
             ])
 
         initialConditions.apply()
+        system.step.value = 0
+        system.modeltime.value = 0.
         system.solve()
 
     ### HOUSEKEEPING: IMPORTANT! ###

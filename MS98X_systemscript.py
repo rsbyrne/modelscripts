@@ -17,8 +17,8 @@ def build(
         buoyancy = 1.,
         creep = 1.,
         creep_sR = 3e4,
-        tau = 4e5,
-        tau_bR = 26.,
+        tau = 1e5,
+        tau_bR = 100.,
         cont_buoyancy_mR = 2.,
         cont_creep_mR = 2.,
         cont_creep_sR_mR = 2.,
@@ -283,8 +283,9 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = [
-        ((("temperatureField", temperatureField),), ("mesh", mesh)),
-        ((("materialVar", materialVar),), ("swarm", swarm)),
+        (temperatureField, 'temperatureField'),
+        (materialVar, 'materialVar'),
         ]
+    blackhole = [0., 0.]
 
     return Grouper(locals())

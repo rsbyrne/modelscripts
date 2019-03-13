@@ -26,7 +26,6 @@ def build(
     def apply(system):
 
         if type(system.mesh) == uw.mesh._spherical_mesh.FeMesh_Annulus:
-            phase = 1.
             curvedBox = CoordSystems.Radial(
                 system.mesh.radialLengths,
                 system.mesh.angularExtent,
@@ -77,6 +76,8 @@ def build(
             ])
 
         initialConditions.apply()
+        system.step.value = 0
+        system.modeltime.value = 0.
         system.solve()
 
     ### HOUSEKEEPING: IMPORTANT! ###

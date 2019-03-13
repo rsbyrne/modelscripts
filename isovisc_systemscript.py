@@ -172,7 +172,8 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = [
-        ((("temperatureField", temperatureField),), ("mesh", mesh)),
+        (temperatureField, 'temperatureField'),
         ]
+    blackhole = [0., 0.]
 
     return Grouper(locals())

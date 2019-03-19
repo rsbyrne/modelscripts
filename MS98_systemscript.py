@@ -29,8 +29,10 @@ def build(
 
     ### MESH & MESH VARIABLES ###
 
-    outerRad = length / (1. - min(0.99999, max(0.00001, ratio)))
+    ratio = max(1.0001, ratio)
     inputs['ratio'] = ratio
+
+    outerRad = ratio / (ratio - 1)
     radii = (outerRad - length, outerRad)
 
     maxAspect = math.pi * sum(radii) / length

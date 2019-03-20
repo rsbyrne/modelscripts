@@ -6,7 +6,7 @@ from planetengine.utilities import Grouper
 
 def build(
         res = 64,
-        ratio = 0.5,
+        f = 0.5,
         aspect = 1.,
         length = 1.,
         Ra = 1e7,
@@ -36,10 +36,10 @@ def build(
 
     ### MESH & MESH VARIABLES ###
 
-    ratio = max(1.0001, ratio)
-    inputs['ratio'] = ratio
+    f = max(0.00001, min(0.99999, f))
+    inputs['f'] = f
 
-    outerRad = ratio / (ratio - 1)
+    outerRad = f / (f - 1)
     radii = (outerRad - length, outerRad)
 
     maxAspect = math.pi * sum(radii) / length
@@ -208,7 +208,7 @@ def build(
                     )
                 ),
             }
-        )
+        ) + 0. * velocityField[0]
 
     ### SYSTEMS ###
 

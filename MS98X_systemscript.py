@@ -39,7 +39,7 @@ def build(
     f = max(0.00001, min(0.99999, f))
     inputs['f'] = f
 
-    outerRad = f / (f - 1)
+    outerRad = 1. / (1. - f)
     radii = (outerRad - length, outerRad)
 
     maxAspect = math.pi * sum(radii) / length
@@ -59,10 +59,9 @@ def build(
         ]
     angLen = angExtentRaw[1] - angExtentRaw[0]
 
-    minRes = 16
-    radRes = max(minRes, int(res / minRes) * minRes)
+    radRes = max(16, int(res / 16) * 16)
     inputs['res'] = radRes
-    angRes = minRes * int(angLen * (int(radRes * radii[1] / length)) / minRes)
+    angRes = 16 * int(angLen * (int(radRes * radii[1] / length)) / 16)
     elementRes = (radRes, angRes)
 
     mesh = uw.mesh.FeMesh_Annulus(

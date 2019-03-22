@@ -29,7 +29,7 @@ def build(
     f = max(0.00001, min(0.99999, f))
     inputs['f'] = f
 
-    outerRad = f / (f - 1)
+    outerRad = 1. / (1. - f)
     radii = (outerRad - length, outerRad)
 
     maxAspect = math.pi * sum(radii) / length

@@ -283,10 +283,10 @@ def build(
 
     ### HOUSEKEEPING: IMPORTANT! ###
 
-    varsOfState = [
-        (temperatureField, 'temperatureField'),
-        (materialVar, 'materialVar'),
-        ]
+    varsOfState = {
+        'temperatureField': temperatureField,
+        'materialVar': materialVar
+        }
     blackhole = [0., 0.]
 
     return Grouper(locals())

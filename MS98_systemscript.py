@@ -205,6 +205,8 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = {'temperatureField': temperatureField}
+    varScales = {'temperatureField': (surfT, surfT + deltaT)}
+    varBounds = {'temperatureField': (surfT, surfT + deltaT, '.', '.')}
     blackhole = [0., 0.]
 
     return Grouper(locals())

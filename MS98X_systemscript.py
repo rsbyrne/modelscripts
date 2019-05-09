@@ -6,7 +6,7 @@ from planetengine.utilities import Grouper
 
 def build(
         res = 64,
-        f = 0.5,
+        f = 0.54,
         aspect = 1.,
         length = 1.,
         Ra = 1e7,
@@ -287,6 +287,8 @@ def build(
         'temperatureField': temperatureField,
         'materialVar': materialVar
         }
+    varScales = {'temperatureField': (surfT, surfT + deltaT)}
+    varBounds = {'temperatureField': (surfT, surfT + deltaT, '.', '.')}
     blackhole = [0., 0.]
 
     return Grouper(locals())

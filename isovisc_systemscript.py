@@ -92,9 +92,7 @@ def build(
 
     ### FUNCTIONS ###
 
-    baseT = surfT + deltaT
-
-    buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * buoyancy
+    buoyancyFn = (temperatureField - surfT) / deltaT * Ra * mesh.unitvec_r_Fn * buoyancy
 
     diffusivityFn = diffusivity
 
@@ -174,6 +172,8 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = {'temperatureField': temperatureField}
+    varScales = {'temperatureField': (surfT, surfT + deltaT)}
+    varBounds = {'temperatureField': (surfT, surfT + deltaT, '.', '.')}
     blackhole = [0., 0.]
 
     return Grouper(locals())

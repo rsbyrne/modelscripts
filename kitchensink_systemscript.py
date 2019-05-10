@@ -9,24 +9,26 @@ def build(
         f = 0.54,
         aspect = 1.,
         length = 1.,
-        Ra = 1e7,
-        heating = 1.,
-        surfT = 0.,
-        deltaT = 1.,
+        periodic = False,
+        dirichlet = True,
+        heating = 0.,
         diffusivity = 1.,
         buoyancy = 1.,
+        buoyancy_bR = 1e7,
         creep = 1.,
         creep_sR = 3e4,
-        tau = 1e5,
-        tau_bR = 100.,
-        cont_buoyancy_mR = 2.,
-        cont_creep_mR = 2.,
-        cont_creep_sR_mR = 2.,
-        cont_tau_mR = 2.,
-        cont_tau_bR_mR = 2.,
+        tau0 = 4e5,
+        tau1 = 1e7,
         cont_heating_mR = 2.,
         cont_diffusivity_mR = 0.5,
-        periodic = False,
+        cont_buoyancy_mR = 2.,
+        cont_buoyancy_bR_mR = 1.,
+        cont_creep_mR = 2.,
+        cont_creep_sR_mR = 1.,
+        cont_tau0_mR = 2.,
+        cont_tau1_mR = 1.,
+        solidus_refT = 1.,
+        solidus_zCoef = 0.,
         ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
@@ -112,54 +114,98 @@ def build(
             basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
             )
 
-    tempBC = uw.conditions.DirichletCondition(
-        variable = temperatureField,
-        indexSetsPerDof = (inner + outer,)
-        )
+    if dirichlet:
+        tempBC = uw.conditions.DirichletCondition(
+            variable = temperatureField,
+            indexSetsPerDof = (inner + outer,)
+            )
+    else:
+        tempBC = uw.conditions.NeumannCondition(
+            fn_flux = 0.,
+            variable = temperatureField,
+            indexSetsPerDof = (inner + outer + sides,)
+            )
 
     ### FUNCTIONS ###
 
-    baseT = surfT + deltaT
     depthFn = (mesh.radialLengths[1] - mesh.radiusFn) \
         / (mesh.radialLengths[1] - mesh.radialLengths[0])
 
-    buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * fn.branching.map(
+    refBuoyancyFn = buoyancy * fn.branching.map(
         fn_key = materialVar,
         mapping = {
-            0: buoyancy,
-            1: buoyancy * cont_buoyancy_mR,
+            0: 1.,
+            1: cont_buoyancy_mR,
             }
         )
 
-    diffusivityFn = fn.branching.map(
+    thermalBuoyancyFn = temperatureField * buoyancy_bR * fn.branching.map(
         fn_key = materialVar,
         mapping = {
-            0: diffusivity,
-            1: diffusivity * cont_diffusivity_mR,
+            0: 1.,
+            1: cont_buoyancy_bR_mR,
             }
         )
 
-    heatingFn = fn.branching.map(
+    buoyancyFn = refBuoyancyFn * (1. + thermalBuoyancyFn)
+
+    diffusivityFn = diffusivity * fn.branching.map(
         fn_key = materialVar,
         mapping = {
-            0: heating,
-            1: heating * cont_heating_mR,
+            0: 1.,
+            1: cont_diffusivity_mR,
+            }
+        )
+
+    heatingFn = heating * fn.branching.map(
+        fn_key = materialVar,
+        mapping = {
+            0: 1.,
+            1: cont_heating_mR,
             }
         )
 
     ### RHEOLOGY ###
 
+    creepFn = creep * fn.branching.map(
+        fn_key = materialVar,
+        mapping = {
+            0: 1.,
+            1: cont_creep_mR
+            }
+        )
+
+    creepSrFn = creep_sR * fn.branching.map(
+        fn_key = materialVar,
+        mapping = {
+            0: 1.,
+            1: cont_creep_sR_mR
+            }
+        )
+
+    creepViscFn = creepFn / fn.math.pow(creepSrFn, temperatureField - 1.)
+
+    cohesiveYieldFn = tau0 * fn.branching.map(
+        fn_key = materialVar,
+        mapping = {
+            0: 1.,
+            1: cont_tau0_mR,
+            }
+        )
+
+    depthYieldFn = depthFn * tau1 * fn.branching.map(
+        fn_key = materialVar,
+        mapping = {
+            0: 1.,
+            1: cont_tau1_mR,
+            }
+        )
+
+    yieldStressFn = cohesiveYieldFn + depthYieldFn
+
     vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
     vc_eqNum = uw.systems.sle.EqNumber(vc, False )
     vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
-
-    yieldStressFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: tau * (1. + (tau_bR - 1) * depthFn),
-            1: tau * cont_tau_mR * (1. + (tau_bR * cont_tau_bR_mR - 1) * depthFn)
-            }
-        )
 
     secInvFn = fn.tensor.second_invariant(
         fn.tensor.symmetric(
@@ -169,45 +215,16 @@ def build(
 
     plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
 
-    creepViscFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: creep * fn.math.pow(
-                fn.misc.constant(creep_sR),
-                -1. * (temperatureField - baseT)
-                ),
-            1: creep * cont_creep_mR * fn.math.pow(
-                fn.misc.constant(creep_sR * cont_creep_sR_mR),
-                -1. * (temperatureField - baseT)
-                ),
-            }
-        )
+    viscosityFn = fn.misc.min(creepViscFn, plasticViscFn) + (0. * velocityField[0])
 
-    viscosityFn = fn.branching.map(
-        fn_key = materialVar,
-        mapping = {
-            0: fn.misc.max(
-                creep,
-                fn.misc.min(
-                    creep * creep_sR,
-                    fn.misc.min(
-                        creepViscFn,
-                        plasticViscFn,
-                        )
-                    )
-                ),
-            1: fn.misc.max(
-                creep * cont_creep_mR,
-                fn.misc.min(
-                    creep * creep_sR * cont_creep_mR * cont_creep_sR_mR,
-                    fn.misc.min(
-                        creepViscFn,
-                        plasticViscFn,
-                        )
-                    )
-                ),
-            }
-        ) + 0. * velocityField[0]
+    ### MELT ###
+
+    solidusFn = solidus_refT + solidus_zCoef * depthFn
+
+    meltFn = fn.branching.conditional([
+        (temperatureField > solidusFn, solidusFn),
+        (True, temperatureField)
+        ])
 
     ### SYSTEMS ###
 
@@ -216,7 +233,7 @@ def build(
         pressureField = pressureField,
         conditions = [velBC,],
         fn_viscosity = viscosityFn,
-        fn_bodyforce = buoyancyFn,
+        fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
         _removeBCs = False,
         )
 
@@ -256,6 +273,8 @@ def build(
             stokes._vnsVec._cself
             )
 
+        temperatureField.data[:] = meltFn.evaluate(mesh)
+
     def solve():
         velocityField.data[:] = 0.
         solver.solve(
@@ -287,8 +306,14 @@ def build(
         'temperatureField': temperatureField,
         'materialVar': materialVar
         }
-    varScales = {'temperatureField': (surfT, surfT + deltaT)}
-    varBounds = {'temperatureField': (surfT, surfT + deltaT, '.', '.')}
+
+    if dirichlet:
+        varScales = {'temperatureField': (0., 1.)}
+        varBounds = {'temperatureField': (0., 1., '.', '.')}
+    else:
+        varScales = {}
+        varBounds = {}
+
     blackhole = [0., 0.]
 
     return Grouper(locals())

@@ -4,3 +4,5 @@ import modelscripts.MS98_observerscript
 import modelscripts.MS98_systemscript
 import modelscripts.MS98X_observerscript
 import modelscripts.MS98X_systemscript
+import modelscripts.kitchensink_observerscript
+import modelscripts.kitchensink_systemscript

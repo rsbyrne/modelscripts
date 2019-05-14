@@ -194,13 +194,12 @@ def build(
     def integrate():
         dt = advDiff.get_max_dt()
         advDiff.integrate(dt)
-        return dt
-
-    def iterate():
-        solve()
-        dt = integrate()
         modeltime.value += dt
         step.value += 1
+
+    def iterate():
+        integrate()
+        solve()
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

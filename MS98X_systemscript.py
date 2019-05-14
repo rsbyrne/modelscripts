@@ -273,13 +273,12 @@ def build(
         advDiff.integrate(dt)
         advector.integrate(dt)
         repopulator.repopulate()
-        return dt
-
-    def iterate():
-        solve()
-        dt = integrate()
         modeltime.value += dt
         step.value += 1
+
+    def iterate():
+        integrate()
+        solve()
 
     ### HOUSEKEEPING: IMPORTANT! ###
 

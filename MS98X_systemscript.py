@@ -120,10 +120,10 @@ def build(
     ### FUNCTIONS ###
 
     baseT = surfT + deltaT
-    depthFn = (mesh.radialLengths[1] - mesh.radiusFn) \
-        / (mesh.radialLengths[1] - mesh.radialLengths[0])
 
-    buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * fn.branching.map(
+    scaledTFn = (temperatureField - surfT) / deltaT
+
+    buoyancyFn = scaledTFn * Ra * fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: buoyancy,
@@ -152,6 +152,8 @@ def build(
     vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
     vc_eqNum = uw.systems.sle.EqNumber(vc, False )
     vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
+
+    depthFn = (mesh.radialLengths[1] - mesh.radiusFn) / length
 
     yieldStressFn = fn.branching.map(
         fn_key = materialVar,
@@ -216,7 +218,7 @@ def build(
         pressureField = pressureField,
         conditions = [velBC,],
         fn_viscosity = viscosityFn,
-        fn_bodyforce = buoyancyFn,
+        fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
         _removeBCs = False,
         )
 

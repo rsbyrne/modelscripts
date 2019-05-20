@@ -10,7 +10,9 @@ def build(
         aspect = 1.,
         length = 1.,
         periodic = False,
-        dirichlet = True,
+        insulating = False,
+        surfT = 0.,
+        deltaT = 1.,
         heating = 0.,
         diffusivity = 1.,
         buoyancy = 1.,
@@ -19,16 +21,17 @@ def build(
         creep_sR = 3e4,
         tau0 = 4e5,
         tau1 = 1e7,
-        cont_heating_mR = 2.,
-        cont_diffusivity_mR = 0.5,
-        cont_buoyancy_mR = 2.,
-        cont_buoyancy_bR_mR = 1.,
-        cont_creep_mR = 2.,
-        cont_creep_sR_mR = 1.,
-        cont_tau0_mR = 2.,
-        cont_tau1_mR = 1.,
         solidus_refT = 1.,
         solidus_zCoef = 0.,
+        materials = {}
+#         cont_heating_mR = 2.,
+#         cont_diffusivity_mR = 0.5,
+#         cont_buoyancy_mR = 2.,
+#         cont_buoyancy_bR_mR = 1.,
+#         cont_creep_mR = 2.,
+#         cont_creep_sR_mR = 1.,
+#         cont_tau0_mR = 2.,
+#         cont_tau1_mR = 1.,
         ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
@@ -114,22 +117,35 @@ def build(
             basis_vectors = (mesh.bnd_vec_normal, mesh.bnd_vec_tangent)
             )
 
-    if dirichlet:
-        tempBC = uw.conditions.DirichletCondition(
-            variable = temperatureField,
-            indexSetsPerDof = (inner + outer,)
-            )
-    else:
+    if insulating:
         tempBC = uw.conditions.NeumannCondition(
             fn_flux = 0.,
             variable = temperatureField,
             indexSetsPerDof = (inner + outer + sides,)
             )
+    else:
+        tempBC = uw.conditions.DirichletCondition(
+            variable = temperatureField,
+            indexSetsPerDof = (inner + outer,)
+            )
+
+    ### MATERIALS ###
+
+    materialProperties = (
+        "heating" = 0.,
+        "diffusivity" = 1.,
+        "buoyancy" = 1.,
+        "buoyancy_bR" = 1e7,
+        "creep" = 1.,
+        "creep_sR" = 3e4,
+        "tau0" = 4e5,
+        "tau1" = 1e7,
+        solidus_refT = 1.,
+        solidus_zCoef = 0.,
 
     ### FUNCTIONS ###
 
-    depthFn = (mesh.radialLengths[1] - mesh.radiusFn) \
-        / (mesh.radialLengths[1] - mesh.radialLengths[0])
+    baseT = surfT + deltaT
 
     refBuoyancyFn = buoyancy * fn.branching.map(
         fn_key = materialVar,
@@ -139,7 +155,9 @@ def build(
             }
         )
 
-    thermalBuoyancyFn = temperatureField * buoyancy_bR * fn.branching.map(
+    scaledTFn = (temperatureField - surfT) / deltaT
+
+    thermalBuoyancyFn = scaledTFn * buoyancy_bR * fn.branching.map(
         fn_key = materialVar,
         mapping = {
             0: 1.,
@@ -164,6 +182,35 @@ def build(
             1: cont_heating_mR,
             }
         )
+
+################################################
+
+    basalCreepFn = creep
+    surfCreepFn = creep_sR
+    baseT = surfT + deltaT
+    creepViscFn = basalCreepFn / fn.math.pow(
+        surfCreepFn,
+        (temperatureField - baseT) / deltaT
+        )
+
+    refYieldFn = tau0
+    depthFn = (mesh.radialLengths[1] - mesh.radiusFn) / length
+    depthYieldFn = depthFn * tau_bR
+    yieldStressFn = refYieldFn * (1. + depthYieldFn)
+    vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
+    vc_eqNum = uw.systems.sle.EqNumber(vc, False )
+    vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
+    secInvFn = fn.tensor.second_invariant(
+        fn.tensor.symmetric(
+            vc.fn_gradient
+            )
+        )
+    plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
+
+    viscosityFn = fn.misc.min(
+        creepViscFn,
+        plasticViscFn
+        ) + 0. * velocityField[0]
 
     ### RHEOLOGY ###
 
@@ -193,6 +240,8 @@ def build(
             }
         )
 
+    depthFn = (mesh.radialLengths[1] - mesh.radiusFn) / length
+
     depthYieldFn = depthFn * tau1 * fn.branching.map(
         fn_key = materialVar,
         mapping = {
@@ -215,7 +264,10 @@ def build(
 
     plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
 
-    viscosityFn = fn.misc.min(creepViscFn, plasticViscFn) + (0. * velocityField[0])
+    viscosityFn = fn.misc.min(
+        creepViscFn,
+        plasticViscFn
+        ) + 0. * velocityField[0]
 
     ### MELT ###
 
@@ -259,6 +311,8 @@ def build(
 
     ### SOLVING ###
 
+    melt = lambda: temperatureField.data[:] = meltFn.evaluate(mesh)
+
     def postSolve():
         # realign solution using the rotation matrix on stokes
         uw.libUnderworld.Underworld.AXequalsY(
@@ -272,11 +326,12 @@ def build(
             stokes._velocitySol._cself, 
             stokes._vnsVec._cself
             )
-
-        temperatureField.data[:] = meltFn.evaluate(mesh)
+        # cap the temperature field at the melting point
+        melt()
 
     def solve():
         velocityField.data[:] = 0.
+        melt()
         solver.solve(
             nonLinearIterate = True,
             callback_post_solve = postSolve,
@@ -305,13 +360,12 @@ def build(
         'temperatureField': temperatureField,
         'materialVar': materialVar
         }
-
-    if dirichlet:
-        varScales = {'temperatureField': (0., 1.)}
-        varBounds = {'temperatureField': (0., 1., '.', '.')}
-    else:
-        varScales = {}
-        varBounds = {}
+    varScales = {
+        'temperatureField': (surfT, baseT)
+        }
+    varBounds = {
+        'temperatureField': (surfT, baseT, '.', '.')
+        }
 
     blackhole = [0., 0.]
 

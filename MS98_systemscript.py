@@ -8,18 +8,12 @@ def build(
         res = 64,
         f = 0.54,
         aspect = 1.,
-        length = 1.,
-        Ra = 1e7,
-        heating = 0.,
-        surfT = 0.,
-        deltaT = 1.,
-        diffusivity = 1.,
-        buoyancy = 1.,
-        creep = 1.,
-        creep_sR = 3e4,
-        tau = 4e5,
-        tau_bR = 26.,
         periodic = False,
+        heating = 0.,
+        Ra = 1e7,
+        surfEta = 3e4,
+        tau0 = 4e5,
+        tau1 = 1e7,
         ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
@@ -95,48 +89,35 @@ def build(
 
     ### FUNCTIONS ###
 
-    baseT = surfT + deltaT
-    depthFn = (mesh.radialLengths[1] - mesh.radiusFn) \
-        / (mesh.radialLengths[1] - mesh.radialLengths[0])
+    buoyancyFn = Ra * temperatureField
 
-    buoyancyFn = temperatureField * Ra * mesh.unitvec_r_Fn * buoyancy
-
-    diffusivityFn = diffusivity
+    diffusivityFn = 1.
 
     heatingFn = heating
 
     ### RHEOLOGY ###
 
+    creepViscFn = fn.math.pow(
+        surfEta,
+        1. - temperatureField
+        )
+
+    depthFn = mesh.radialLengths[1] - mesh.radiusFn
+    yieldStressFn = tau0 + depthFn * tau1
     vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
     vc_eqNum = uw.systems.sle.EqNumber(vc, False )
     vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
-
-    yieldStressFn = tau * (1. + (tau_bR - 1) * depthFn)
-
     secInvFn = fn.tensor.second_invariant(
         fn.tensor.symmetric(
             vc.fn_gradient
             )
         )
-
     plasticViscFn = yieldStressFn / (2. * secInvFn + 1e-18)
 
-    creepViscFn = creep * fn.math.pow(
-        fn.misc.constant(creep_sR),
-        -1. * (temperatureField - baseT)
-        )
-
-    viscosityFn = \
-        fn.misc.max(
-            creep,
-            fn.misc.min(
-                creep * creep_sR,
-                fn.misc.min(
-                    creepViscFn,
-                    plasticViscFn,
-                    )
-                )
-            ) + 0. * velocityField[0]
+    viscosityFn = fn.misc.min(
+        creepViscFn,
+        plasticViscFn
+        ) + 0. * velocityField[0]
 
     ### SYSTEMS ###
 
@@ -145,7 +126,7 @@ def build(
         pressureField = pressureField,
         conditions = [velBC,],
         fn_viscosity = viscosityFn,
-        fn_bodyforce = buoyancyFn,
+        fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
         _removeBCs = False,
         )
 
@@ -204,8 +185,5 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = {'temperatureField': temperatureField}
-    varScales = {'temperatureField': (surfT, surfT + deltaT)}
-    varBounds = {'temperatureField': (surfT, surfT + deltaT, '.', '.')}
-    blackhole = [0., 0.]
 
     return Grouper(locals())

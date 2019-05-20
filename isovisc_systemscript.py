@@ -8,15 +8,9 @@ def build(
         res = 64,
         f = 0.54,
         aspect = 1.,
-        length = 1.,
-        Ra = 1e7,
-        heating = 0.,
-        surfT = 0.,
-        deltaT = 1.,
-        diffusivity = 1.,
-        buoyancy = 1.,
-        creep = 1.,
         periodic = False,
+        heating = 0.,
+        Ra = 1e7,
         ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
@@ -29,6 +23,7 @@ def build(
     f = max(0.00001, min(0.99999, f))
     inputs['f'] = f
 
+    length = 1.
     outerRad = 1. / (1. - f)
     radii = (outerRad - length, outerRad)
 
@@ -49,9 +44,9 @@ def build(
         ]
     angLen = angExtentRaw[1] - angExtentRaw[0]
 
-    radRes = max(16, int(res / 16) * 16)
+    radRes = max(4, int(res / 4) * 4)
     inputs['res'] = radRes
-    angRes = 16 * int(angLen * (int(radRes * radii[1] / length)) / 16)
+    angRes = 4 * int(angLen * (int(radRes * radii[1] / length)) / 4)
     elementRes = (radRes, angRes)
 
     mesh = uw.mesh.FeMesh_Annulus(
@@ -92,9 +87,9 @@ def build(
 
     ### FUNCTIONS ###
 
-    buoyancyFn = (temperatureField - surfT) / deltaT * Ra * mesh.unitvec_r_Fn * buoyancy
+    buoyancyFn = Ra * temperatureField
 
-    diffusivityFn = diffusivity
+    diffusivityFn = 1.
 
     heatingFn = heating
 
@@ -113,7 +108,7 @@ def build(
         pressureField = pressureField,
         conditions = [velBC,],
         fn_viscosity = viscosityFn,
-        fn_bodyforce = buoyancyFn,
+        fn_bodyforce = buoyancyFn * mesh.unitvec_r_Fn,
         _removeBCs = False,
         )
 
@@ -171,8 +166,5 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = {'temperatureField': temperatureField}
-    varScales = {'temperatureField': (surfT, surfT + deltaT)}
-    varBounds = {'temperatureField': (surfT, surfT + deltaT, '.', '.')}
-    blackhole = [0., 0.]
 
     return Grouper(locals())

@@ -288,8 +288,5 @@ def build(
         'temperatureField': temperatureField,
         'materialVar': materialVar
         }
-    varScales = {'temperatureField': (surfT, surfT + deltaT)}
-    varBounds = {'temperatureField': (surfT, surfT + deltaT, '.', '.')}
-    blackhole = [0., 0.]
 
     return Grouper(locals())

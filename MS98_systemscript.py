@@ -26,6 +26,7 @@ def build(
     f = max(0.00001, min(0.99999, f))
     inputs['f'] = f
 
+    length = 1.
     outerRad = 1. / (1. - f)
     radii = (outerRad - length, outerRad)
 

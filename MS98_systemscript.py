@@ -186,5 +186,7 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = {'temperatureField': temperatureField}
+    varScales = {'temperatureField': [[0., 1.]]}
+    varBounds = {'temperatureField': [[0., 1., '.', '.']]}
 
     return Grouper(locals())

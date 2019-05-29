@@ -288,5 +288,7 @@ def build(
         'temperatureField': temperatureField,
         'materialVar': materialVar
         }
+    varScales = {'temperatureField': [[surfT, baseT]]}
+    varBounds = {'temperatureField': [[surfT, baseT, '.', '.']]}
 
     return Grouper(locals())

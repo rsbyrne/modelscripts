@@ -23,19 +23,23 @@ def build(
 
     ### MESH & MESH VARIABLES ###
 
-    f = max(0.00001, min(0.99999, f))
-    inputs['f'] = f
+    maxf = 0.99999
+    if f == 'max':
+        f = maxf
+    else:
+        assert f < maxf
 
     length = 1.
     outerRad = 1. / (1. - f)
     radii = (outerRad - length, outerRad)
 
     maxAspect = math.pi * sum(radii) / length
-    aspect = min(aspect, maxAspect)
-    inputs['aspect'] = aspect
-    if aspect == maxAspect:
+    if aspect == 'max':
+        aspect = maxAspect
         periodic = True
-        inputs['periodic'] = periodic
+    else:
+        assert aspect < maxAspect
+        periodic = False
 
     width = length**2 * aspect * 2. / (radii[1]**2 - radii[0]**2)
     midpoint = math.pi / 2.
@@ -47,9 +51,9 @@ def build(
         ]
     angLen = angExtentRaw[1] - angExtentRaw[0]
 
-    radRes = max(16, int(res / 16) * 16)
-    inputs['res'] = radRes
-    angRes = 16 * int(angLen * (int(radRes * radii[1] / length)) / 16)
+    assert res % 4 == 0
+    radRes = res
+    angRes = 4 * int(angLen * (int(radRes * radii[1] / length)) / 4)
     elementRes = (radRes, angRes)
 
     mesh = uw.mesh.FeMesh_Annulus(

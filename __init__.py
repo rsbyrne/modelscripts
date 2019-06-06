@@ -6,4 +6,4 @@ import modelscripts.MS98X_observerscript
 import modelscripts.MS98X_systemscript
 # import modelscripts.kitchensink_observerscript
 # import modelscripts.kitchensink_systemscript
-
+import modelscripts.isovisc_observerscript_NOFIGS

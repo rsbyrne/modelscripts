@@ -1,9 +1,10 @@
 import modelscripts.isovisc_observerscript
+import modelscripts.isovisc_observerscript_NOFIGS
 import modelscripts.isovisc_systemscript
+import modelscripts.isovisc2_systemscript
 import modelscripts.MS98_observerscript
 import modelscripts.MS98_systemscript
 import modelscripts.MS98X_observerscript
 import modelscripts.MS98X_systemscript
 # import modelscripts.kitchensink_observerscript
 # import modelscripts.kitchensink_systemscript
-import modelscripts.isovisc_observerscript_NOFIGS

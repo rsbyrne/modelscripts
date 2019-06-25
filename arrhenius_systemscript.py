@@ -9,8 +9,10 @@ def build(
         res = 64,
         f = 0.54,
         aspect = 1.,
+        periodic = False,
         heating = 0.,
         Ra = 1e7,
+        surfEta = 3e4,
         ):
 
     ### HOUSEKEEPING: IMPORTANT! ###
@@ -91,6 +93,10 @@ def build(
 
     ### FUNCTIONS ###
 
+    vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
+    vc_eqNum = uw.systems.sle.EqNumber(vc, False )
+    vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
+
     buoyancyFn = Ra * temperatureField
 
     diffusivityFn = 1.
@@ -99,11 +105,10 @@ def build(
 
     ### RHEOLOGY ###
 
-    vc = uw.mesh.MeshVariable(mesh = mesh, nodeDofCount = 2)
-    vc_eqNum = uw.systems.sle.EqNumber(vc, False )
-    vcVec = uw.systems.sle.SolutionVector(vc, vc_eqNum)
-
-    viscosityFn = 1.
+    viscosityFn = fn.math.pow(
+        surfEta,
+        1. - temperatureField
+        )
 
     ### SYSTEMS ###
 
@@ -149,6 +154,7 @@ def build(
     def solve():
         velocityField.data[:] = 0.
         solver.solve(
+            nonLinearIterate = False,
             callback_post_solve = postSolve,
             )
         uw.libUnderworld.Underworld.AXequalsX(

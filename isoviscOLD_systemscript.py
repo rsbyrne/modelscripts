@@ -1,7 +1,6 @@
 import underworld as uw
 from underworld import function as fn
 import math
-import numpy as np
 
 from planetengine.utilities import Grouper
 
@@ -163,17 +162,8 @@ def build(
         modeltime.value += dt
         step.value += 1
 
-    def clipVals():
-        for varName, var in sorted(varsOfState.items()):
-            varScale = varScales[varName]
-            inArr = var.data
-            var.data[:] = np.array(
-                [np.clip(subarr, *clipval) for subarr, clipval in zip(var.data.T, varScale)]
-                ).T
-
     def iterate():
         integrate()
-        clipVals()
         solve()
 
     ### HOUSEKEEPING: IMPORTANT! ###

@@ -9,8 +9,6 @@ def build(
         res = 64,
         f = 0.54,
         aspect = 1.,
-        periodic = False,
-        heating = 0.,
         Ra = 1e7,
         eta0 = 3e4,
         ):
@@ -101,7 +99,7 @@ def build(
 
     diffusivityFn = 1.
 
-    heatingFn = heating
+    heatingFn = 1.
 
     ### RHEOLOGY ###
 

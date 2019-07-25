@@ -183,11 +183,7 @@ def build(
     ### HOUSEKEEPING: IMPORTANT! ###
 
     varsOfState = {'temperatureField': temperatureField}
-    obsVars = {
-        'velocityField': velocityField,
-        'viscosityFn': viscosityFn,
-        'stressFn': viscosityFn * velocityField,
-        }
+    obsVars = {'velocityField': velocityField}
     varScales = {'temperatureField': [[0., 1.]]}
     varBounds = {'temperatureField': [[0., 1., '.', '.']]}
 
